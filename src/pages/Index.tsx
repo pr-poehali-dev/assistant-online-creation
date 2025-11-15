@@ -19,10 +19,11 @@ type Project = {
 const Index = () => {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([
-    { role: 'assistant', content: 'Привет! Я AI-ассистент для разработки. Опишите приложение или бота, который хотите создать.' }
+    { role: 'assistant', content: 'Привет! Я Claude — ваш AI-ассистент для разработки. Опишите приложение или бота, который хотите создать.' }
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [activeTab, setActiveTab] = useState('projects');
+  const [isLoading, setIsLoading] = useState(false);
 
   const projects: Project[] = [
     { id: '1', name: 'E-commerce Landing', type: 'web', status: 'running', lastModified: '2 часа назад' },
@@ -30,14 +31,45 @@ const Index = () => {
     { id: '3', name: 'REST API Service', type: 'api', status: 'stopped', lastModified: '3 дня назад' },
   ];
 
-  const handleSendMessage = () => {
-    if (!inputMessage.trim()) return;
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim() || isLoading) return;
     
-    setChatMessages([...chatMessages, 
-      { role: 'user', content: inputMessage },
-      { role: 'assistant', content: 'Понял! Начинаю разработку приложения. Сейчас создам структуру проекта...' }
-    ]);
+    const userMsg = inputMessage;
+    const newMessages = [...chatMessages, { role: 'user' as const, content: userMsg }];
+    setChatMessages(newMessages);
     setInputMessage('');
+    setIsLoading(true);
+    
+    try {
+      const response = await fetch('https://functions.poehali.dev/4167f72d-ccaa-4720-8973-460eb88d4e2d', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMsg,
+          history: chatMessages.slice(-10)
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setChatMessages([...newMessages, { role: 'assistant', content: data.message }]);
+      } else {
+        setChatMessages([...newMessages, { 
+          role: 'assistant', 
+          content: `Ошибка: ${data.error || 'Не удалось получить ответ. Проверьте настройку API ключа.'}`
+        }]);
+      }
+    } catch (error) {
+      setChatMessages([...newMessages, { 
+        role: 'assistant', 
+        content: 'Ошибка подключения к AI. Попробуйте ещё раз.'
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getProjectIcon = (type: string) => {
@@ -56,7 +88,7 @@ const Index = () => {
           <div className="w-8 h-8 bg-gradient-to-br from-primary to-orange-600 rounded-lg flex items-center justify-center shadow-lg shadow-primary/20 animate-glow">
             <Icon name="Zap" size={18} className="text-primary-foreground" />
           </div>
-          <h1 className="text-xl font-semibold bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent">DevAssistant</h1>
+          <h1 className="text-xl font-semibold bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent">CodeForge AI</h1>
         </div>
         
         <div className="flex items-center gap-2">
@@ -234,8 +266,14 @@ export default App;`}</code>
                           <div className="w-6 h-6 bg-gradient-to-br from-primary to-orange-600 rounded flex items-center justify-center animate-glow">
                             <Icon name="Bot" size={14} className="text-primary-foreground" />
                           </div>
-                          <span className="text-sm font-semibold">AI Ассистент</span>
+                          <span className="text-sm font-semibold">Claude AI</span>
                         </div>
+                        {isLoading && (
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-primary rounded-full animate-glow" />
+                            <span className="text-xs text-muted-foreground">Думаю...</span>
+                          </div>
+                        )}
                       </div>
                       
                       <ScrollArea className="flex-1 p-4">
@@ -271,8 +309,13 @@ export default App;`}</code>
                             }}
                             className="min-h-[60px] resize-none backdrop-blur-sm bg-white/5 border-border/50 focus:border-primary/50 transition-all duration-300"
                           />
-                          <Button onClick={handleSendMessage} size="icon" className="flex-shrink-0 bg-gradient-to-r from-primary to-orange-600 hover:from-primary/90 hover:to-orange-500 shadow-lg shadow-primary/20 transition-all duration-300 hover:scale-110">
-                            <Icon name="Send" size={18} />
+                          <Button 
+                            onClick={handleSendMessage} 
+                            size="icon" 
+                            className="flex-shrink-0 bg-gradient-to-r from-primary to-orange-600 hover:from-primary/90 hover:to-orange-500 shadow-lg shadow-primary/20 transition-all duration-300 hover:scale-110"
+                            disabled={isLoading}
+                          >
+                            {isLoading ? <Icon name="Loader2" size={18} className="animate-spin" /> : <Icon name="Send" size={18} />}
                           </Button>
                         </div>
                       </div>

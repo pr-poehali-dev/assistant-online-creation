@@ -1,0 +1,29 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS request for CORS",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedHeaders": {
+        "Access-Control-Allow-Origin": "*"
+      }
+    },
+    {
+      "name": "POST valid message",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "message": "Создай простой React компонент кнопки",
+        "history": []
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "message": "string",
+        "model": "string",
+        "usage": "object"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
